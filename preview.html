@@ -296,7 +296,7 @@ function updateRecommend(){
       const a = document.createElement('a');
       a.href = url;
       const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-      a.download = `meeting-heatmap-${stamp}.jpg`;
+      a.download = `팀 미팅 시간표 ${stamp}.png`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
     });
     document.getElementById('openNewTab').addEventListener('click', async ()=>{

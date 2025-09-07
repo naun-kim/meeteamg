@@ -497,7 +497,7 @@ th:first-child, td:first-child{width:120px;min-width:120px;max-width:200px;white
     document.body.removeChild(captureArea);
 
     // 3) dataURL 저장 후 preview.html로 이동
-    const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+    const dataURL = canvas.toDataURL('image/png');
     try {
       localStorage.setItem('meeting_scheduler_preview_jpg', dataURL);
       const rec = document.getElementById('showRecommend').checked ? '1' : '0';
