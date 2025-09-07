@@ -490,7 +490,7 @@ th:first-child, td:first-child{width:120px;min-width:120px;max-width:200px;white
     document.body.appendChild(captureArea);
 
     // 2) 캔버스로 캡쳐 (고해상도)
-    const scale = Math.max(3, window.devicePixelRatio || 1);
+    const scale = Math.max(4, window.devicePixelRatio || 1);
     const canvas = await html2canvas(captureArea, { backgroundColor:'#ffffff', scale });
 
     // 임시 DOM 제거
