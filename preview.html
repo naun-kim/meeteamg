@@ -283,9 +283,11 @@ function updateRecommend(){
       const area = document.getElementById('captureArea');
       area.classList.add('capture-fix');
       await new Promise(r => requestAnimationFrame(r));
+      const DPR = window.devicePixelRatio || 1;
+      let scale = Math.max(3,DPR);
       const canvas = await html2canvas(area,{backgroundColor:'#ffffff',scale:Math.min(2,window.devicePixelRatio||1.5),windowWidth:area.scrollWidth,windowHeight:area.scrollHeight});
       area.classList.remove('capture-fix');
-      return canvas.toDataURL('image/jpeg',0.92);
+      return canvas.toDataURL('image/jpeg',0.95);
     }
 
 
