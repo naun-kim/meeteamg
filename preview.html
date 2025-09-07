@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>팀 미팅 히트맵</title> 
+  <style>
+    :root{ --ok-h:160; --brand:#2563eb; --line:#e5e7eb; --fg:#111827; --muted:#6b7280; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#fff;color:var(--fg)}
+    .wrap{max-width:530px;margin:0 auto;padding:16px}
+    h1{margin:0 0 6px;font-size:20px}
+    .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+    .panel{display:block;width:100%;margin:0 auto;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;overflow: hidden; contain: layout paint style;}
+    .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;font-size:14px;cursor:pointer}
+    .brand{background:#2563eb;border-color:#2563eb;color:#fff}
+    table{ border-collapse: separate; border-spacing: 0; width: 100%; max-width: 100%; min-width: 320px; table-layout: fixed;}
+    thead th{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);z-index:5;height:28px}
+    th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;text-align:center;font-size:13px}
+    th:first-child,td:first-child{position:sticky;left:0;background:#fff;border-right:1px solid var(--line);text-align:center;z-index:4;padding:2px 4px;white-space:nowrap;width:48px;max-width:52px;}
+
+    th:last-child,td:last-child{border-right:none}
+    tr:last-child td{border-bottom:none}
+    .cell{height:28px;display:flex;align-items:center;justify-content:center;margin:4px;border-radius:6px}
+    .all{outline:2px solid var(--brand);outline-offset:-2px}
+    .legend{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .grad{height:10px;flex:1;border:1px solid var(--line);border-radius:999px}
+    .badge{font-size:12px;color:var(--muted)}
+    .count{font-size:11px;color:#0b5c4b;mix-blend-multiply}
+    .theme-select{margin-bottom:12px}
+    
+
+    /* 워터마크 */
+    .wm{margin-top:10px;font-size:11px;color:#9ca3af;display:flex; align-items:center; gap:8px;}
+    .wm a{ color:#9ca3af; text-decoration:none; }
+    .wm .dot{ width:4px; height:4px; background:#d1d5db; border-radius:9999px; }
+    @media (max-width:600px){ .wm{ font-size:10px; } }
+
+   
+    .thead th, td { width:auto; min-width:48px; }
+    .theme-select label{font-size:14px;color:var(--muted);font-family:inherit;font-weight:500;}
+    .theme-select select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;}
+
+    .capture-fix thead th {position:static !important; top:auto !important;}
+    .heat{ overflow-x: auto; }
+
+    @media (max-width: 600px){ 
+      .wrap{ max-width: 100%; padding: 12px; }
+      .panel{ padding: 10px; border-radius: 10px; }
+
+      table{ min-width: 320px; }        /* 아주 작은 기기용 하한 */
+      th:first-child, td:first-child{ width: 44px; max-width: 48px;  padding: 2px 2px; font-size: 12px; white-space: nowrap;}
+
+      .cell{ margin: 2px; height: 24px; border-radius: 5px; } /* 칸 높이/여백 축소 */
+      .legend{ gap: 6px; }
+      .sub{ font-size: 12px; }
+    }
+
+    @media (max-width: 360px){
+     .cell{ height: 22px; }
+      th:first-child, td:first-child{ width: 40px; }
+    }
+
+
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>팀 미팅 히트맵</h1>
+    <div class="sub"><b>과반 이상만</b> 색칠 · <b>전원 참석</b>은 테두리 강조</div>
+
+    <!-- 🎨 테마 선택 -->
+    <div class="theme-select">
+      <label for="theme">색상 테마: </label>
+      <select id="theme">
+        <option value="red">빨강</option>
+
+        <option value="orange">주황</option>
+        <option value="yellow">노랑</option>
+        <option value="green" selected>초록</option>
+        <option value="blue">파랑</option>
+        <option value="purple">보라</option>
+        <option value="black">검정</option>
+        <option value="pink">핑크</option>
+      </select>
+    </div>
+
+    <div class="panel" id="captureArea">
+      <div id="titleArea" style="margin-bottom:8px;font-weight:600">팀 미팅 히트맵</div>
+
+      <div class="legend">
+        <span class="badge">과반</span>
+        <div class="grad" id="gradBar"></div>
+        <span class="badge">전원</span>
+        <span class="badge" id="legendNums"></span>
+      </div>
+
+      <div class="heat">
+        <table id="heatTable"></table>
+      </div>
+
+      <!-- ⭐ 추천 시간대 표시 -->
+      <div id="recommendSection" style="margin-top:16px; display:none;">
+        <h3 style="font-size:16px; margin:8px 0;">추천 미팅 시간</h3>
+        <div class="sub"><b>전원 참석 가능 시간대</b></div>
+        <ul id="recommendList" style="font-size:13px; color:#111; line-height:1.4"></ul>
+      </div>
+
+      <!-- ⭐ 워터마크 (캡처 대상 내부에 있어야 저장 이미지에 함께 들어감) -->
+      <div class="wm" id="watermark">
+        <span id="wmText">© 2025 by Naun</span>
+      </div>
+
+    </div>
+
+    <div class="btnrow">
+      <button id="saveJpg" class="brand">JPG로 저장</button>
+      <button id="openNewTab">새 탭으로 열기(모바일)</button>
+      <button id="backBtn">돌아가기</button>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    const raw = localStorage.getItem('meeting_scheduler_mvp');
+    if(!raw){
+      alert("데이터가 없습니다. team meating.html에서 먼저 체크해 주세요!");
+      location.href='./';
+    }
+    const data = JSON.parse(raw);
+    const brand = (data.brand || '').trim();
+    if (brand) {
+    document.getElementById('wmText').textContent = brand;
+    }
+    if (data.brandLink) {
+    const a = document.getElementById('wmLink');
+    a.textContent = data.brandLink.replace(/^https?:\/\//,'');
+    a.href = data.brandLink;
+    }
+
+    const participants = data.participants || [];
+    const total = participants.length || 0;
+    const days = data.days || ['Mon','Tue','Wed','Thu','Fri'];
+    const start = data.start || '09:00';
+    const end   = data.end   || '21:00';
+    const step  = Number(data.step || 60);
+    const busyObj = data.busy || {};
+    const busyMap = {};
+    for (const [k,arr] of Object.entries(busyObj)) busyMap[k] = new Set(arr);
+
+    const toMin = (hhmm)=>{ const [h,m]=hhmm.split(':').map(Number); return h*60+m; };
+    const toHHMM = (m)=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    const slotId = (d,t)=>`${d}-${t}`;
+    const times = (()=>{ const out=[]; for(let t=toMin(start); t<toMin(end); t+=step) out.push(toHHMM(t)); return out; })();
+    const majority = Math.max(1, Math.ceil(total/2) + (total%2===0?1:0));
+
+    document.getElementById('legendNums').textContent =
+      total ? `과반 ${majority}/${total} ~ 전원 ${total}/${total}` : '';
+
+    // 🎨 테마 hue 매핑
+    const themeHue = {
+      red:0, orange:30, yellow:50, green:120,
+      blue:210, purple:270, black:'black', pink:330
+    };
+    let currentTheme = 'green';
+
+    function freeCount(day,time){
+      const id = slotId(day,time);
+      let free=0;
+      for (const p of participants){
+        const set = busyMap[p.id] || new Set();
+        if (!set.has(id)) free++;
+      }
+      return free;
+    }
+
+    function cellStyle(free){
+      if (total === 0 || free < majority) return { bg:'transparent', show:false, all:false };
+      const ratio = (free - majority) / Math.max(1, (total - majority));
+      if(currentTheme==='black'){
+        const l = 90 - Math.round(ratio*60);
+        return { bg:`hsl(0,0%,${l}%)`, show:true, all: free===total };
+      }else{
+        const hue = themeHue[currentTheme];
+        const s = 60 + Math.round(ratio*10);
+        const l = 88 - Math.round(ratio*43);
+        return { bg:`hsl(${hue}, ${s}%, ${l}%)`, show:true, all: free===total };
+      }
+    }
+
+    function drawTable(){
+      const table = document.getElementById('heatTable');
+      table.innerHTML = '';
+      const thead = document.createElement('thead');
+      thead.innerHTML = `<tr><th></th>${days.map(d=>`<th>${d}</th>`).join('')}</tr>`;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      for (const t of times){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<th>${t}</th>`;
+        for (const d of days){
+          const f = freeCount(d, t);
+          const st = cellStyle(f);
+          const td = document.createElement('td');
+          const box = document.createElement('div');
+          box.className = 'cell' + (st.all ? ' all' : '');
+          box.style.background = st.bg;
+          box.title = `${d} ${t} · ${f}/${total}`;
+          box.innerHTML = st.show ? `<span class="count">${f}/${total}</span>` : '';
+          td.appendChild(box);
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      updateRecommend();
+      updateLegend();
+    }
+
+    function updateLegend(){
+      const gradBar = document.getElementById('gradBar');
+      if(currentTheme==='black'){
+        gradBar.style.background = 'linear-gradient(90deg, hsl(0,0%,90%) 0%, hsl(0,0%,30%) 100%)';
+      }else{
+        const hue = themeHue[currentTheme];
+        gradBar.style.background = `linear-gradient(90deg, hsl(${hue},60%,88%) 0%, hsl(${hue},60%,45%) 100%)`;
+      }
+    }
+
+    // ⭐ 전원 참석 시간대 추출
+    function getAllSlots(){
+      const all = [];
+      for(const t of times){
+        for(const d of days){
+          const f = freeCount(d,t);
+          if(f === total) all.push(`${d} ${t}`);
+        }
+      }
+      return all;
+    }
+
+function updateRecommend(){
+  const params = new URLSearchParams(location.search);
+  const sec = document.getElementById('recommendSection');
+  const list = document.getElementById('recommendList');
+
+  if(params.get('rec')==='1'){
+    const slots = getAllSlots();
+    if(slots.length){
+      const groups = {};
+      for(const s of slots){
+        const [day,time] = s.split(' ');
+        if(!groups[day]) groups[day] = [];
+        groups[day].push(time);
+      }
+      list.innerHTML = Object.entries(groups)
+        .map(([day, times]) =>
+          `<li><b>${day}</b>: ${times.join(', ')}</li>`
+        ).join('');
+    }else{
+      list.innerHTML = '<li>전원 참석 가능한 시간 없음</li>';
+    }
+    sec.style.display='block';   // ✅ 확실히 보여주기
+  } else {
+    sec.style.display='none';    // rec=0일 때 숨기기
+  }
+}
+
+
+
+    // 초기 렌더
+    drawTable();
+
+    // 테마 선택 이벤트
+    document.getElementById('theme').addEventListener('change', e=>{
+      currentTheme = e.target.value;
+      drawTable();
+    });
+
+    async function getJpg(){
+      const area = document.getElementById('captureArea');
+      area.classList.add('capture-fix');
+      await new Promise(r => requestAnimationFrame(r));
+      const canvas = await html2canvas(area,{backgroundColor:'#ffffff',scale:Math.min(2,window.devicePixelRatio||1.5),windowWidth:area.scrollWidth,windowHeight:area.scrollHeight});
+      area.classList.remove('capture-fix');
+      return canvas.toDataURL('image/jpeg',0.92);
+    }
+
+
+    document.getElementById('saveJpg').addEventListener('click', async ()=>{
+      const url = await getJpg();
+      const a = document.createElement('a');
+      a.href = url;
+      const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+      a.download = `meeting-heatmap-${stamp}.jpg`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+    document.getElementById('openNewTab').addEventListener('click', async ()=>{
+      const url = await getJpg();
+      const w = window.open();
+      w.document.write(`<img src="${url}" style="max-width:100%;height:auto;display:block"/>`);
+      w.document.close();
+    });
+    document.getElementById('backBtn').addEventListener('click', ()=> history.back());
+  </script>
+</body>
+</html>
